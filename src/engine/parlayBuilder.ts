@@ -4,14 +4,21 @@ import { buildBelief } from './belief';
 import { combineParlayOdds, parlayExpectedValue, kellyToUnits } from '../models/kelly';
 import { getGamesForDate } from '../data/fetcher';
 import chalk from 'chalk';
+import { generatePropsForGame, propBeliefToGameBelief } from './propsBelief';
 
 export function correlationPenalty(pick1: Belief, pick2: Belief): number {
   const sameGame = pick1.game === pick2.game;
   const sameSeries =
     pick1.homeTeam === pick2.homeTeam && pick1.awayTeam === pick2.awayTeam;
   const sameDate = pick1.gameDate === pick2.gameDate;
+  const bothProps = pick1.pickType === 'prop' && pick2.pickType === 'prop';
+  const samePlayer = pick1.propDetails?.playerName === pick2.propDetails?.playerName;
 
-  if (sameGame) return 0.3; // Same game, different market — heavily penalize
+  // Two props for the same player = maximum correlation
+  if (bothProps && samePlayer) return 0.1;
+  // Prop and game pick from same game = slightly correlated (player performance tied to team result)
+  if (sameGame && (pick1.pickType === 'prop' || pick2.pickType === 'prop')) return 0.6;
+  if (sameGame) return 0.3;
   if (sameSeries && sameDate) return 0.5;
   if (sameSeries) return 0.8;
   return 1.0;
@@ -162,6 +169,30 @@ export async function generateDailyParlay(
       } catch (err) {
         console.error(chalk.red(`Error building belief for ${game.homeTeam.name} vs ${game.awayTeam.name} (${type}/${side}): ${String(err)}`));
       }
+    }
+
+    // Generate player prop candidates and merge into the pool
+    try {
+      const propBeliefs = await generatePropsForGame(
+        game.id,
+        { id: game.homeTeam.id, name: game.homeTeam.name },
+        { id: game.awayTeam.id, name: game.awayTeam.name },
+        game.gameDate,
+        { home: game.homeTeamStats.daysOfRest, away: game.awayTeamStats.daysOfRest },
+        game.homeTeamStats.pace,
+        game.awayTeamStats.pace
+      );
+      // Props use a lower threshold (55) since prop markets have less efficient pricing
+      const propThreshold = Math.min(55, cvsThreshold - 10);
+      for (const prop of propBeliefs) {
+        const asBelief = propBeliefToGameBelief(prop);
+        allCandidates.push(asBelief);
+        if (asBelief.cvsScore >= propThreshold) {
+          allBeliefs.push(asBelief);
+        }
+      }
+    } catch (err) {
+      console.error(chalk.red(`Props generation failed for ${game.homeTeam.name} vs ${game.awayTeam.name}: ${String(err)}`));
     }
   }
 

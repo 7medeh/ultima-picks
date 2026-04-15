@@ -125,6 +125,21 @@ async function main(): Promise<void> {
       await runSimulateCommand(season, weeks);
     });
 
+  // props
+  program
+    .command('props')
+    .description('Generate player prop picks for today\'s games')
+    .option('--date <date>', 'Target a specific date (YYYY-MM-DD)')
+    .option('--tomorrow', 'Target tomorrow\'s games')
+    .option('--player <name>', 'Focus on a specific player')
+    .option('--stat <stat>', 'Focus on a specific stat (points, rebounds, assists, threes)')
+    .option('--history', 'Show historical prop performance')
+    .option('--parlay', 'Force show a props parlay even with fewer picks')
+    .action(async (opts: { date?: string; tomorrow?: boolean; player?: string; stat?: string; history?: boolean; parlay?: boolean }) => {
+      const { runProps } = await import('./props');
+      await runProps(opts);
+    });
+
   // report
   program
     .command('report')

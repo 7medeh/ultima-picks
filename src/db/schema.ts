@@ -54,6 +54,45 @@ export function initializeSchema(): void {
       parlay_id TEXT
     );
 
+    CREATE TABLE IF NOT EXISTS prop_beliefs (
+      prop_id TEXT PRIMARY KEY,
+      generated_at TEXT NOT NULL,
+      game_id TEXT NOT NULL,
+      game TEXT NOT NULL,
+      game_date TEXT NOT NULL,
+      player_name TEXT NOT NULL,
+      team_name TEXT NOT NULL,
+      opponent_name TEXT NOT NULL,
+      stat TEXT NOT NULL,
+      direction TEXT NOT NULL,
+      line REAL NOT NULL,
+      odds INTEGER NOT NULL,
+      projected_value REAL,
+      projected_std_dev REAL,
+      over_probability REAL,
+      under_probability REAL,
+      market_implied_prob REAL,
+      model_edge REAL,
+      season_avg REAL,
+      last5_avg REAL,
+      last10_avg REAL,
+      hits_over_last5 INTEGER,
+      hits_over_last10 INTEGER,
+      opponent_rank_vs_position INTEGER,
+      matchup_adjustment REAL,
+      cvs_score REAL NOT NULL,
+      belief_score REAL NOT NULL,
+      belief_label TEXT NOT NULL,
+      kelly_fraction REAL,
+      recommended_units INTEGER,
+      rationale TEXT NOT NULL,
+      scouting_report TEXT,
+      result TEXT NOT NULL DEFAULT 'PENDING',
+      actual_value REAL,
+      result_fetched_at TEXT,
+      parlay_id TEXT
+    );
+
     CREATE TABLE IF NOT EXISTS parlays (
       parlay_id TEXT PRIMARY KEY,
       generated_at TEXT NOT NULL,
