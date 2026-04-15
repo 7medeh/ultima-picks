@@ -1,0 +1,29 @@
+{
+  "modelWeights": {
+    "poisson": 0.28,
+    "elo": 0.24,
+    "powerRating": 0.26,
+    "impliedProbability": 0.22,
+    "lastUpdated": "2025-01-01T00:00:00.000Z",
+    "version": 1
+  },
+  "cvsWeights": {
+    "modelEdge": 0.25,
+    "eloProb": 0.20,
+    "restAdvantage": 0.10,
+    "homeCourtFactor": 0.10,
+    "injuryImpact": 0.15,
+    "momentumScore": 0.10,
+    "h2hHistory": 0.10,
+    "lastUpdated": "2025-01-01T00:00:00.000Z"
+  },
+  "cvsThreshold": 68,
+  "beliefThresholds": {
+    "conviction": 75,
+    "lean": 60
+  },
+  "learningRate": 0.05,
+  "minModelWeight": 0.10,
+  "maxModelWeight": 0.50,
+  "eloRatings": {}
+}
