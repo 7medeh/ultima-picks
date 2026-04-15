@@ -5,6 +5,7 @@
   "main": "dist/cli/index.js",
   "scripts": {
     "picks": "ts-node src/cli/index.ts picks",
+    "props": "ts-node src/cli/index.ts props",
     "analyze": "ts-node src/cli/index.ts analyze",
     "standings": "ts-node src/cli/index.ts standings",
     "track": "ts-node src/cli/index.ts track",

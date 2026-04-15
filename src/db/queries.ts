@@ -8,6 +8,8 @@ import {
   PickType,
   BeliefLabel,
   RecalibrationResult,
+  PropBelief,
+  PropStat,
   FactorPerformance,
   ParlayMode,
 } from '../data/types';
@@ -326,4 +328,130 @@ export function saveFactorPerformance(fp: FactorPerformance): void {
   `).run(
     fp.lastUpdated, fp.factorName, fp.rollingCorrelation20, fp.rollingCorrelation50, fp.rollingCorrelation100
   );
+}
+
+// ---------------------------------------------------------------------------
+// Prop belief queries
+// ---------------------------------------------------------------------------
+
+export function savePropBelief(prop: PropBelief): void {
+  getDb().prepare(`
+    INSERT OR REPLACE INTO prop_beliefs (
+      prop_id, generated_at, game_id, game, game_date, player_name, team_name, opponent_name,
+      stat, direction, line, odds, projected_value, projected_std_dev,
+      over_probability, under_probability, market_implied_prob, model_edge,
+      season_avg, last5_avg, last10_avg, hits_over_last5, hits_over_last10,
+      opponent_rank_vs_position, matchup_adjustment,
+      cvs_score, belief_score, belief_label, kelly_fraction, recommended_units,
+      rationale, scouting_report, result, actual_value, result_fetched_at, parlay_id
+    ) VALUES (
+      ?, ?, ?, ?, ?, ?, ?, ?,
+      ?, ?, ?, ?, ?, ?,
+      ?, ?, ?, ?,
+      ?, ?, ?, ?, ?,
+      ?, ?,
+      ?, ?, ?, ?, ?,
+      ?, ?, ?, ?, ?, ?
+    )
+  `).run(
+    prop.propId, prop.generatedAt, prop.gameId, prop.game, prop.gameDate,
+    prop.playerName, prop.teamName, prop.opponentName,
+    prop.stat, prop.direction, prop.line, prop.odds,
+    prop.projectedValue, prop.projectedStdDev,
+    prop.overProbability, prop.underProbability, prop.marketImpliedProb, prop.modelEdge,
+    prop.seasonAvg, prop.last5Avg, prop.last10Avg,
+    prop.hitsOverLineInLast5, prop.hitsOverLineInLast10,
+    prop.opponentRankVsPosition, prop.matchupAdjustment,
+    prop.cvsScore, prop.beliefScore, prop.beliefLabel,
+    prop.kellyFraction, prop.recommendedUnits,
+    JSON.stringify(prop.rationale), prop.scoutingReport,
+    prop.result, prop.actualValue, prop.resultFetchedAt, prop.parlayId ?? null
+  );
+}
+
+export function updatePropResult(propId: string, result: PickResult, actualValue: number): void {
+  getDb().prepare(`
+    UPDATE prop_beliefs SET result = ?, actual_value = ?, result_fetched_at = ? WHERE prop_id = ?
+  `).run(result, actualValue, new Date().toISOString(), propId);
+}
+
+export function getPendingProps(): PropBelief[] {
+  const rows = getDb().prepare(`
+    SELECT * FROM prop_beliefs WHERE result = 'PENDING' ORDER BY game_date ASC
+  `).all() as Record<string, unknown>[];
+  return rows.map(rowToPropBelief);
+}
+
+export function getRecentProps(limit: number = 50): PropBelief[] {
+  const rows = getDb().prepare(`
+    SELECT * FROM prop_beliefs ORDER BY generated_at DESC LIMIT ?
+  `).all(limit) as Record<string, unknown>[];
+  return rows.map(rowToPropBelief);
+}
+
+export function getPropWinRateByStat(stat: PropStat): number {
+  const row = getDb().prepare(`
+    SELECT
+      COUNT(CASE WHEN result = 'WIN' THEN 1 END) * 1.0 /
+      NULLIF(COUNT(CASE WHEN result IN ('WIN','LOSS') THEN 1 END), 0) as win_rate
+    FROM prop_beliefs WHERE stat = ? AND result IN ('WIN','LOSS','PUSH')
+  `).get(stat) as Record<string, unknown>;
+  return (row?.win_rate as number) ?? 0;
+}
+
+export function getPropLifetimeStats(): {
+  totalProps: number; wins: number; losses: number; winRate: number;
+} {
+  const row = getDb().prepare(`
+    SELECT
+      COUNT(*) as total,
+      COUNT(CASE WHEN result = 'WIN' THEN 1 END) as wins,
+      COUNT(CASE WHEN result = 'LOSS' THEN 1 END) as losses
+    FROM prop_beliefs WHERE result IN ('WIN','LOSS','PUSH')
+  `).get() as Record<string, unknown>;
+  const total = (row?.total as number) ?? 0;
+  const wins = (row?.wins as number) ?? 0;
+  const losses = (row?.losses as number) ?? 0;
+  return { totalProps: total, wins, losses, winRate: total > 0 ? wins / total : 0 };
+}
+
+function rowToPropBelief(row: Record<string, unknown>): PropBelief {
+  return {
+    propId: row.prop_id as string,
+    generatedAt: row.generated_at as string,
+    gameId: row.game_id as string,
+    game: row.game as string,
+    gameDate: row.game_date as string,
+    playerName: row.player_name as string,
+    teamName: row.team_name as string,
+    opponentName: row.opponent_name as string,
+    stat: row.stat as PropStat,
+    direction: row.direction as PropBelief['direction'],
+    line: row.line as number,
+    odds: row.odds as number,
+    projectedValue: row.projected_value as number,
+    projectedStdDev: row.projected_std_dev as number,
+    overProbability: row.over_probability as number,
+    underProbability: row.under_probability as number,
+    marketImpliedProb: row.market_implied_prob as number,
+    modelEdge: row.model_edge as number,
+    seasonAvg: row.season_avg as number,
+    last5Avg: row.last5_avg as number,
+    last10Avg: row.last10_avg as number,
+    hitsOverLineInLast5: row.hits_over_last5 as number,
+    hitsOverLineInLast10: row.hits_over_last10 as number,
+    opponentRankVsPosition: row.opponent_rank_vs_position as number,
+    matchupAdjustment: row.matchup_adjustment as number,
+    cvsScore: row.cvs_score as number,
+    beliefScore: row.belief_score as number,
+    beliefLabel: row.belief_label as BeliefLabel,
+    kellyFraction: row.kelly_fraction as number,
+    recommendedUnits: row.recommended_units as number,
+    rationale: JSON.parse(row.rationale as string),
+    scoutingReport: row.scouting_report as string,
+    result: row.result as PickResult,
+    actualValue: row.actual_value as number | null,
+    resultFetchedAt: row.result_fetched_at as string | null,
+    parlayId: row.parlay_id as string | undefined,
+  };
 }

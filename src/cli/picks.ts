@@ -59,13 +59,13 @@ export async function runPicks(flags: {
 }): Promise<void> {
   // ASCII header
   console.log(chalk.cyan.bold(`
- ███╗   ██╗██████╗  █████╗     ██████╗ ██╗ ██████╗██╗  ██╗███████╗
- ████╗  ██║██╔══██╗██╔══██╗    ██╔══██╗██║██╔════╝██║ ██╔╝██╔════╝
- ██╔██╗ ██║██████╔╝███████║    ██████╔╝██║██║     █████╔╝ ███████╗
- ██║╚██╗██║██╔══██╗██╔══██║    ██╔═══╝ ██║██║     ██╔═██╗ ╚════██║
- ██║ ╚████║██████╔╝██║  ██║    ██║     ██║╚██████╗██║  ██╗███████║
- ╚═╝  ╚═══╝╚═════╝ ╚═╝  ╚═╝    ╚═╝     ╚═╝ ╚═════╝╚═╝  ╚═╝╚══════╝
-                     E N G I N E
+ ██╗   ██╗██╗  ████████╗██╗███╗   ███╗ █████╗     ██████╗ ██╗ ██████╗██╗  ██╗███████╗
+ ██║   ██║██║  ╚══██╔══╝██║████╗ ████║██╔══██╗    ██╔══██╗██║██╔════╝██║ ██╔╝██╔════╝
+ ██║   ██║██║     ██║   ██║██╔████╔██║███████║    ██████╔╝██║██║     █████╔╝ ███████╗
+ ██║   ██║██║     ██║   ██║██║╚██╔╝██║██╔══██║    ██╔═══╝ ██║██║     ██╔═██╗ ╚════██║
+ ╚██████╔╝███████╗██║   ██║██║ ╚═╝ ██║██║  ██║    ██║     ██║╚██████╗██║  ██╗███████║
+  ╚═════╝ ╚══════╝╚═╝   ╚═╝╚═╝     ╚═╝╚═╝  ╚═╝    ╚═╝     ╚═╝ ╚═════╝╚═╝  ╚═╝╚══════╝
+                              vibe coded by walid hamade
   `));
 
   const targetDate = resolveTargetDate(flags);
@@ -147,16 +147,39 @@ function printPickRow(pick: Belief): void {
   const colorFn = beliefColor(pick.beliefLabel);
   const cvsFn = cvsColor(pick.cvsScore);
 
-  console.log(
-    chalk.bold.white(`  ${pick.pickedTeamOrSide}`) +
-    chalk.gray(` (${pick.pickType}${pick.pickType === 'total' ? '' : ''})`) +
-    chalk.white('  ') +
-    chalk.bold(formatOdds(pick.odds)) +
-    chalk.gray('  CVS: ') + cvsFn(`${pick.cvsScore.toFixed(1)}`) +
-    chalk.gray('  ') + colorFn(`[${pick.beliefLabel}]`) +
-    chalk.gray(`  ${pick.recommendedUnits}u`)
-  );
-  console.log(chalk.gray(`    ${pick.game} · ${pick.gameDate}`));
+  if (pick.pickType === 'prop' && pick.propDetails) {
+    const d = pick.propDetails;
+    const statLabel = d.stat.replace(/_/g, '+');
+    const dirLabel = d.direction.toUpperCase();
+    const proj = d.projectedValue.toFixed(1);
+    const hitRate = `${d.hitsOverLineInLast5}/5 L5`;
+
+    console.log(
+      chalk.bold.magenta(`  🏀 PROP: ${d.playerName}`) +
+      chalk.white(` — ${statLabel} ${dirLabel} ${d.line}`) +
+      chalk.gray('  ') +
+      chalk.bold(formatOdds(pick.odds)) +
+      chalk.gray('  CVS: ') + cvsFn(`${pick.cvsScore.toFixed(1)}`) +
+      chalk.gray('  ') + colorFn(`[${pick.beliefLabel}]`) +
+      chalk.gray(`  ${pick.recommendedUnits}u`)
+    );
+    console.log(
+      chalk.gray(`    Proj: ${proj} | Season avg: ${d.seasonAvg.toFixed(1)} | L5 avg: ${d.last5Avg.toFixed(1)} | Hit rate: ${hitRate}`)
+    );
+    console.log(chalk.gray(`    ${pick.game} · ${pick.gameDate}`));
+  } else {
+    console.log(
+      chalk.bold.white(`  ${pick.pickedTeamOrSide}`) +
+      chalk.gray(` (${pick.pickType})`) +
+      chalk.white('  ') +
+      chalk.bold(formatOdds(pick.odds)) +
+      chalk.gray('  CVS: ') + cvsFn(`${pick.cvsScore.toFixed(1)}`) +
+      chalk.gray('  ') + colorFn(`[${pick.beliefLabel}]`) +
+      chalk.gray(`  ${pick.recommendedUnits}u`)
+    );
+    console.log(chalk.gray(`    ${pick.game} · ${pick.gameDate}`));
+  }
+
   console.log(chalk.dim(`    ${pick.scoutingReport}`));
   console.log();
 }
